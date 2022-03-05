@@ -32,28 +32,12 @@ export default class ObsidianHackMD extends Plugin {
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('paper-plane', 'Publish to HackMD', async (evt: MouseEvent) => {
-			let resp = JSON.parse(await request({
-				method: "POST",
-				url: new URL('/v1/notes', baseURL).href,
-				body: JSON.stringify({
-					"title": this.app.workspace.getActiveFile().name,
-					"content": await this.app.vault.read(this.app.workspace.getActiveFile()),
-					"readPermission": "owner",
-					"writePermission": "owner",
-					"commentPermission": "everyone"
-				}),
-				headers: {
-					'Authorization': 'Bearer ' + this.settings.hackMdApiToken,
-					"Content-Type": "application/json"
-				},
-			}));
+			let links = this.app.metadataCache.getFileCache(this.app.workspace.getActiveFile()).links;
 
-			console.log(resp)
-
-			if (resp.error !== undefined) {
-				return false;
-			} else {
-				new Notice("Published!", 3600)
+			if (links.length > 0) {
+				new LinkedNotesSelector(this.app, links, files => {
+					console.log(files);
+				}).open();
 			}
 		});
 		// Perform additional things with the ribbon
@@ -169,8 +153,8 @@ async function publishFiles(files: TFile[]) : Promise<boolean> {
 			method: "POST",
 			url: new URL('/v1/notes', baseURL).href,
 			body: JSON.stringify({
-				"title": this.app.workspace.getActiveFile().name,
-				"content": await this.app.vault.read(this.app.workspace.getActiveFile()),
+				"title": file.name,
+				"content": await this.app.vault.read(file),
 				"readPermission": "owner",
 				"writePermission": "owner",
 				"commentPermission": "everyone"
@@ -185,8 +169,6 @@ async function publishFiles(files: TFile[]) : Promise<boolean> {
 
 		if (resp.error !== undefined) {
 			return false;
-		} else {
-			new Notice("Published!", 3600)
 		}
 	}
 
